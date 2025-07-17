@@ -1,0 +1,37 @@
+{%extends "layout.html" %}
+{% block content %}
+    <h1>テーマ史クイズ</h1>
+
+    {% if question_data %}
+        <h2>第{{ question_number }}問</h2>
+        <h3>{{ question_data.question}}</h3>
+
+        {% if not show_result_on_question %}
+        <form action="{{ url_for('process_answer') }}" method="post">
+            <select name="user_answer">
+                {% for key, value in question_data.choices.items() %}
+                    <option value="{{ key }}">{{ key }}: {{ value }}</option>
+                {% endfor %}
+            </select>
+            <p></p>
+            <button type="submit">回答を送信</button>
+        </form>
+        {% endif %}
+        {% if show_result_on_question %}
+            {% if is_correct %}
+                <h1 style="color: green;">正解！</h1>
+            {% else %}
+                <h1 style="color: red;">残念、間違い！</h1>
+                <p>正解は..</p>
+            {% endif %}
+            {% if show_next_button %}
+                <form action="{{url_for('show_quiz')}}" method="get">
+                    <button type="submit">次の問題へ</button>
+                </form>
+            {% endif %}
+        {% endif %}
+    {% else %}
+        <p>クイズが開始されていません、またはエラーが発生しました</p>
+        <p><a href="{{ url_for('show_quiz') }}">クイズを始める</a></p>
+    {% endif %}
+{% endblock %}

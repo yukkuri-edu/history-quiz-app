@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>クイズ終了！</h1>
+    {% if selected_theme %}
+        <p>テーマ：<strong>{{ selected_theme }}</strong> のクイズが終わりました！</p>
+    {% endif %}
+    <p>あなたの最終スコアは <strong>{{ final_score }} / {{ total_questions }}</strong> でした！</p>
+    <p><a href="{{ url_for('index') }}">もう一度挑戦する (テーマ選択に戻る)</a></p>
+{% endblock %}

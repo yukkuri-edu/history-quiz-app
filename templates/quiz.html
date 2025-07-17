@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>テーマ史クイズ</h1>
+
+    {# テーマ選択画面の表示 #}
+    {% if show_theme_selection %}
+        <p>クイズのテーマを選んでください：</p>
+        <form action="{{ url_for('start_quiz') }}" method="post">
+            <select name="theme">
+                {% for theme in themes %}
+                    <option value="{{ theme }}">{{ theme }}</option>
+                {% endfor %}
+            </select>
+            <p></p>
+            <button type="submit">クイズを開始する</button>
+        </form>
+
+    {# 問題表示画面の表示 #}
+    {% elif question_data %}
+        <h2>第{{ question_number }}問 / 全{{ total_questions }}問</h2>
+        <h3>{{ question_data.question }}</h3>
+
+        {# まだ回答を送信していない場合のみフォームを表示 #}
+        {% if not show_result_on_question %}
+            <form action="{{ url_for('process_answer') }}" method="post">
+                <select name="user_answer">
+                    {% for key, value in question_data.choices.items() %}
+                        <option value="{{ key }}">{{ key }}: {{ value }}</option>
+                    {% endfor %}
+                </select>
+                <p></p>
+                <button type="submit">回答を送信</button>
+            </form>
+        {% endif %}
+
+        {# 回答送信後の正誤判定表示 #}
+        {% if show_result_on_question %}
+            {% if is_correct %}
+                <h1 style="color: green;">正解！</h1>
+                <h2>{{ explanation_data }}</h2>
+            {% else %}
+                <h1 style="color: red;">残念、間違い！</h1>
+                <p>正解は <strong>{{ question_data.correct_answer }}</strong> でした。</p>
+                <h2>{{ explanation_data }}</h2>                
+            {% endif %}
+
+            {# 次の操作ボタン #}
+            {% if show_next_button %}
+                <form action="{{ url_for('show_question') }}" method="get">
+                    <button type="submit">次の問題へ</button>
+                </form>
+            {% elif show_final_result_button %}
+                <form action="{{ url_for('show_final_result') }}" method="get">
+                    <button type="submit">最終結果を見る</button>
+                </form>
+            {% endif %}
+        {% endif %}
+
+    {% else %}
+        {# 何らかのエラーで問題データがない場合など #}
+        <p>クイズが開始されていません、またはエラーが発生しました。</p>
+        <p><a href="{{ url_for('index') }}">クイズを始める</a></p>
+    {% endif %}
+{% endblock %}
