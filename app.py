@@ -1,8 +1,9 @@
+import os
 from flask import Flask, request, render_template, session, redirect, url_for
 import random # 問題のシャッフルなどで使用
 
 app = Flask(__name__)
-app.secret_key = "your_very_secret_key_here" # ★本番環境ではより複雑な文字列に変更してください★
+app.secret_key = os.environ.get("SECRET_KEY", "fallback_secret_key_for_dev_only") # ★本番環境ではより複雑な文字列に変更してください★
 
 # --- クイズデータ構造の変更 ---
 # テーマごとに問題をまとめる辞書形式に変更します。
@@ -219,4 +220,7 @@ def show_final_result():
     )
 
 if __name__ == "__main__":
+    # 開発環境で.envファイルを読み込む場合 (pip install python-dotenv が必要)
+    # from dotenv import load_dotenv
+    # load_dotenv() # .env ファイルから環境変数を読み込む
     app.run(debug=True)
