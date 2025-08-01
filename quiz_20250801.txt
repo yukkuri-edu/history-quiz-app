@@ -1,13 +1,3 @@
-import os
-from flask import Flask, request, render_template, session, redirect, url_for
-import random # 問題のシャッフルなどで使用
-
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "fallback_secret_key_for_dev_only") # ★本番環境ではより複雑な文字列に変更してください★
-
-# --- クイズデータ構造の変更 ---
-# テーマごとに問題をまとめる辞書形式に変更します。
-# 各テーマの中に、問題IDと問題の詳細データを持つ構造になります。
 quiz_themes = {
     "土地制度史": {
         1: {
@@ -73,7 +63,8 @@ quiz_themes = {
             "correct_answer": "A",
             "explanation": "1853年、アメリカの使節としてペリーが軍艦4隻を率いて浦賀に来航した。翌年にもペリーは来航し、日米和親条約が結ばれ鎖国政策は終わった。そののち、幕末の倒幕運動を経て、1868年に明治新政府が樹立された。1871年には廃藩置県が行われ、明治政府により中央集権化が推し進められた。1894年は日清戦争が起きた年である。"
         }
-    },        # さらに外交史の問題を追加できます
+        # さらに外交史の問題を追加できます
+    },
     "文化史": {
         1: {
             "question": "【文化史】源氏物語の作者は誰でしょう？",
@@ -96,137 +87,3 @@ quiz_themes = {
         # さらに文化史の問題を追加できます
     }
 }
-
-@app.route("/")
-def index():
-    # クイズのトップページ。テーマ選択肢を渡す
-    themes = list(quiz_themes.keys()) # 利用可能なテーマのリスト
-    return render_template("quiz.html", themes=themes, show_theme_selection=True)
-
-@app.route("/start_quiz", methods=["POST"])
-def start_quiz():
-    # ユーザーが選択したテーマを取得
-    selected_theme = request.form.get("theme")
-
-    if selected_theme not in quiz_themes:
-        # 無効なテーマが選択された場合はエラーまたはトップに戻す
-        return redirect(url_for('index'))
-
-    # セッションを初期化し、選択されたテーマと問題リストを設定
-    session.clear()
-    session['selected_theme'] = selected_theme
-    # 選択されたテーマの問題を取得し、順番をシャッフル（オプション）
-    session['question_ids'] = list(quiz_themes[selected_theme].keys())
-    random.shuffle(session['question_ids']) # 問題をランダムにする
-    
-    session['current_question_index'] = 0 # 現在の問題のインデックス
-    session['score'] = 0 # スコアを初期化
-    session['quiz_started'] = True # クイズ開始フラグ
-
-    # 最初の問題の表示にリダイレクト
-    return redirect(url_for('show_question'))
-
-@app.route("/question")
-def show_question():
-    if 'quiz_started' not in session or not session['quiz_started']:
-        return redirect(url_for('index')) # クイズが始まっていない場合はテーマ選択に戻す
-
-    selected_theme = session.get('selected_theme')
-    question_ids = session.get('question_ids')
-    current_question_index = session.get('current_question_index')
-
-    if not selected_theme or not question_ids or current_question_index is None:
-        return redirect(url_for('index')) # セッション情報が不正ならトップに戻す
-
-    # 現在の問題IDを取得
-    question_id = question_ids[current_question_index]
-    question = quiz_themes[selected_theme].get(question_id)
-    #explanation = session.get(question)
-
-    if not question:
-        # 問題が見つからない場合はエラーページなどにリダイレクト
-        session.clear()
-        return redirect(url_for('index'))
-
-    return render_template(
-        "quiz.html",
-        question_data=question,
-        #explanation_data=explanation,
-        question_number=current_question_index + 1, # ユーザー向けに1から表示
-        total_questions=len(question_ids), # 総問題数を表示
-        show_result_on_question=False,
-        show_next_button=False,
-        show_final_result_button=False,
-        show_theme_selection=False # 問題表示中はテーマ選択を表示しない
-    )
-
-@app.route("/answer", methods=["POST"])
-def process_answer():
-    if 'quiz_started' not in session or not session['quiz_started']:
-        return redirect(url_for('index'))
-
-    user_answer = request.form.get("user_answer")
-    selected_theme = session.get('selected_theme')
-    question_ids = session.get('question_ids')
-    current_question_index = session.get('current_question_index')
-    
-    if not selected_theme or not question_ids or current_question_index is None or not user_answer:
-        return redirect(url_for('index'))
-
-    question_id = question_ids[current_question_index]
-    question = quiz_themes[selected_theme].get(question_id)
-    explanation = question["explanation"]
-
-    if not question:
-        session.clear()
-        return redirect(url_for('index'))
-
-    is_correct = (user_answer == question["correct_answer"])
-
-    if is_correct:
-        session['score'] = session.get('score', 0) + 1
-
-    # 次の問題のインデックスを計算
-    next_question_index = current_question_index + 1
-
-    render_params = {
-        "question_data": question,
-        "explanation_data": explanation,
-        "question_number": current_question_index + 1,
-        "total_questions": len(question_ids),
-        "user_answered": user_answer,
-        "is_correct": is_correct,
-        #"explanation_data": explanation,
-        "show_result_on_question": True, # 正誤判定を表示
-        "show_next_button": False,
-        "show_final_result_button": False,
-        "show_theme_selection": False # 問題表示中はテーマ選択を表示しない
-    }
-
-    if next_question_index < len(question_ids):
-        session['current_question_index'] = next_question_index
-        render_params["show_next_button"] = True
-    else:
-        render_params["show_final_result_button"] = True
-
-    return render_template("quiz.html", **render_params)
-
-@app.route("/final_result")
-def show_final_result():
-    final_score = session.get('score', 0)
-    selected_theme = session.get('selected_theme')
-    total_questions = len(session.get('question_ids', [])) if session.get('question_ids') else 0
-    session.clear() # クイズ終了なのでセッションデータをクリア
-
-    return render_template(
-        "final_result.html",
-        final_score=final_score,
-        total_questions=total_questions,
-        selected_theme=selected_theme
-    )
-
-if __name__ == "__main__":
-    # 開発環境で.envファイルを読み込む場合 (pip install python-dotenv が必要)
-    # from dotenv import load_dotenv
-    # load_dotenv() # .env ファイルから環境変数を読み込む
-    app.run(debug=True)
